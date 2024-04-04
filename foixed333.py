@@ -319,9 +319,6 @@ hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) #конвертируем в hsv
 corner_points = find_large_clusters(hsv, np.array((0, 0, 0), np.uint8), np.array((255, 255, 26), np.uint8), cornerarea) #находим крайние маркеры и объекты
 start_objects = find_large_clusters(hsv, np.array((0, 0, 0), np.uint8), np.array((255, 255, 49), np.uint8), startarea)
 
-if (len(start_objects) != 2):
-    print('Start points error')
-
 a = [] #массив, помечающий пиксели, принадлежащие траектории
 visited = [] #массив пометок о посещении
 p = [] #массив предков (погуглите 'восстановление пути в BFS')
@@ -346,6 +343,11 @@ cv2.waitKey(0) #ждём до нажатия любой клавиши
 
 (xr1, yr1, xr2, yr2) = track_robot()
 
+for i in range(len(start_objects)):
+    for j in range(i, len(start_objects) - 1):
+        if (dist(width // 2, height // 2, start_objects[j][0], start_objects[j][1]) > dist(width // 2, height // 2, start_objects[j + 1][0], start_objects[j + 1][1])):
+            start_objects[j], start_objects[j + 1] = start_objects[j + 1], start_objects[j]
+            
 if (dist(xr1, yr1, start_objects[0][0], start_objects[0][1]) < dist(xr1, yr1, start_objects[1][0], start_objects[1][1])):
     start_objects[0], start_objects[1] = start_objects[1], start_objects[0]
 
@@ -378,12 +380,14 @@ while (len(q) > 0): #пока есть точки в очереди
 while (p[fny][fnx] != (-1, -1)): #восстанавливаем путь, пока есть предыдущая точка
     points.append([fnx, fny]) #добавляем точку
     fnx, fny = p[fny][fnx] #переходим в её предка
-print(points) #выводим полученный массив
-#rnfejhjkwwhgfrdefghggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
-points2=[]
+
+points2 = []
 for i in range(len(points)):
-    points2.append(points[len(points)-i-1])
-points=points2
+    points2.append(points[len(points) - i - 1])
+points = points2
+
+print(points) #выводим полученный массив
+
 ### SHOW FRAME ###
 res = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 if (resize):
