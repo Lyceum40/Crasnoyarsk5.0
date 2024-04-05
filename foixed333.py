@@ -395,13 +395,21 @@ if (resize):
 cv2.imshow('frame', res)
 cv2.waitKey(1 - pauseFrame)
 
+points.append([ystx, ysty])
+
 ### FOLLOW THE PATH ###
 tekpoint = 0 #текущая точка
 while (tekpoint < len(points)): #если не все точки пройдены
     if (not skipPath):
         drive_to_point(points[tekpoint][0], points[tekpoint][1], 30, 40, 0.2, False) #едем в точку
-    tekpoint += 12 #пропускаем 24 точки
-    
+    if (tekpoint + 12 > len(points) and tekpoint != len(points - 1)):
+        tekpoint = len(points - 1)
+    else:
+        tekpoint += 12 #пропускаем 24 точки
+
+send(255)
+time.sleep(0.5)
+
 ### READ AND RESIZE FRAME ###
 ret, img = cap.read()
 if (resize):
@@ -521,5 +529,3 @@ send(255) #остановиться
 sock.close()
 cv2.waitKey(0) #ждать нажатия кнопки
 cv2.destroyAllWindows() #закрыть все окна
-
-
