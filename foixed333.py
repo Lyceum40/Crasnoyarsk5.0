@@ -23,18 +23,18 @@ printFPS = True #отображать FPS
 showError = False #отображать накопленную ошибку
 showCommand = True #отображать посылаемые команды
 cornerEps = 30 #допустимое дополнительно расстояние, на которое может выступать объект относительно маркеров
-green_min_mask = np.array((2, 71, 179),np.uint8)
-green_max_mask = np.array((2, 71, 179),np.uint8)
-yellow_min_mask = np.array((2, 71, 179),np.uint8)
-yellow_max_mask = np.array((2, 71, 179),np.uint8)
-start_min_mask = np.array((2, 71, 179),np.uint8)
-start_max_mask = np.array((2, 71, 179),np.uint8)
-corner_min_mask = np.array((2, 71, 179),np.uint8)
-corner_max_mask = np.array((2, 71, 179),np.uint8)
-persik_min_mask = np.array((2, 71, 179),np.uint8)
-persik_max_mask = np.array((2, 71, 179),np.uint8)
-magenta_min_mask = np.array((2, 71, 179),np.uint8)
-magenta_max_mask = np.array((2, 71, 179),np.uint8)
+green_min_mask = np.array((49, 167, 36),np.uint8)
+green_max_mask = np.array((90, 255, 255),np.uint8)
+yellow_min_mask = np.array((17, 52, 135),np.uint8)
+yellow_max_mask = np.array((24, 215, 206),np.uint8)
+start_min_mask = np.array((0, 0, 0),np.uint8)
+start_max_mask = np.array((255, 94, 78),np.uint8)
+corner_min_mask = np.array((0, 0, 0),np.uint8)
+corner_max_mask = np.array((255, 99, 50),np.uint8)
+persik_min_mask = np.array((0, 106, 120),np.uint8)
+persik_max_mask = np.array((17, 255, 255),np.uint8)
+magenta_min_mask = np.array((153, 135, 64),np.uint8)
+magenta_max_mask = np.array((175, 227, 255),np.uint8)
 ### END OF CONSTANTS ###
 
 err = 0 #текущая накопленная ошибка
@@ -247,6 +247,9 @@ def track_robot():
         cv2.imshow('mask2', thresh)
         cv2.waitKey(1)         
         
+    (xr1, yr1) = find_large_clusters(hsv, persik_min_mask, persik_max_mask, 1000)[0]  
+    (xr2, yr2) = find_large_clusters(hsv, magenta_min_mask, magenta_max_mask, 1000)[0]   
+        
     return (xr1, yr1, xr2, yr2)
 
 # def sort_points_by_angle(p): #сортируем объекты так, чтобы объезжать их без сильных поворотов
@@ -340,7 +343,7 @@ for i in range(height): #идём по картинке
     p.append([(-1, -1)] * width)
     for j in range(width):
         h, s, v = hsv[i][j] #получаем h, s и v компоненты пикселя
-        if (h > 97 and h < 121 and s > 90 and v > 90): #проверяем, подходят ли они под условия траектории
+        if (h > 92 and h < 127 and s > 165 and v > 116): #проверяем, подходят ли они под условия траектории
             hsv[i][j] = (55, 255, 255) #отмечаем их зелёным цветом
             a[i][j] = 1 #помечаем пиксель проходимым
 
@@ -368,10 +371,13 @@ gsty = start_objects[1][1]
 
 (stx, sty) = nearest_point(a, gstx, gsty)
 (fnx, fny) = nearest_point(a, ystx, ysty)
-(ctx, cty) = get_center(corner_points)
+#(ctx, cty) = get_center(corner_points)
+(ctx, cty) = (width // 2, height // 2)
 res = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 if (resize):
     res = cv2.resize(res, showingResolution)
+for (x, y) in corner_points:
+    cv2.circle(res, (x, y), 10, (255, 255, 255), -1)
 cv2.circle(res, (gstx, gsty), 10, (120, 120, 0), -1)
 cv2.circle(res, (ystx, ysty), 10, (120, 0, 120), -1)
 cv2.imshow('frame', res)
@@ -412,8 +418,8 @@ tekpoint = 0 #текущая точка
 while (tekpoint < len(points)): #если не все точки пройдены
     if (not skipPath):
         drive_to_point(points[tekpoint][0], points[tekpoint][1], 200, 25, 0.15, False) #едем в точку
-    if (tekpoint + 12 > len(points) and tekpoint != len(points - 1)):
-        tekpoint = len(points - 1)
+    if (tekpoint + 12 > len(points) and tekpoint != len(points) - 1):
+        tekpoint = len(points) - 1
     else:
         tekpoint += 12 #пропускаем 24 точки
 
@@ -507,7 +513,7 @@ for (x, y) in green_points:
     point = (x, y) #требуемая точка
     if (point == cube):
         continue
-    setSpeed(35)
+    #setSpeed(35)
     drive_to_point(ctx, cty, 100, 30, 0.17) #едем в центр
     send(5) #открываем захват
     d = dist(ctx, cty, x, y) #расстояние до точки
@@ -517,7 +523,7 @@ for (x, y) in green_points:
     #dovorot(x, y) #довернуть для точного захвата
     send(255) #остановиться
     send(4) #закрыть захват
-    setSpeed(40)
+    #setSpeed(40)
     drive_to_point(ctx, cty, 200, 30, 0.17) #вернуться в центр
 
 d = dist(ctx, cty, gstx, gsty)
@@ -531,9 +537,10 @@ send(6) #отъехать назад
 drive_to_point(ystx, ysty, 100, 50, 0.17)
 send(4)
 drive_to_point(gstx, gsty, 100, 50, 0.17) #отвезти куб
+send(6)#отезд назад
 
 for (x, y) in yellow_points:
-    setSpeed(35)
+    #setSpeed(35)
     drive_to_point(ctx, cty, 100, 30, 0.17) #едем в центр
     point = (x, y) #требуемая точка
     send(5) #открываем захват
@@ -544,7 +551,7 @@ for (x, y) in yellow_points:
     #dovorot(x, y) #довернуть для точного захвата
     send(255) #остановиться
     send(4) #закрыть захват
-    setSpeed(40)
+    #setSpeed(40)
     drive_to_point(ctx, cty, 200, 30, 0.17) #вернуться в центр
 
 d = dist(ctx, cty, ystx, ysty)
