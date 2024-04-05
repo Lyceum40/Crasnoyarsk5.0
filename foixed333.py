@@ -23,6 +23,18 @@ printFPS = True #отображать FPS
 showError = False #отображать накопленную ошибку
 showCommand = True #отображать посылаемые команды
 cornerEps = 30 #допустимое дополнительно расстояние, на которое может выступать объект относительно маркеров
+green_min_mask = np.array((2, 71, 179),np.uint8)
+green_max_mask = np.array((2, 71, 179),np.uint8)
+yellow_min_mask = np.array((2, 71, 179),np.uint8)
+yellow_max_mask = np.array((2, 71, 179),np.uint8)
+start_min_mask = np.array((2, 71, 179),np.uint8)
+start_max_mask = np.array((2, 71, 179),np.uint8)
+corner_min_mask = np.array((2, 71, 179),np.uint8)
+corner_max_mask = np.array((2, 71, 179),np.uint8)
+persik_min_mask = np.array((2, 71, 179),np.uint8)
+persik_max_mask = np.array((2, 71, 179),np.uint8)
+magenta_min_mask = np.array((2, 71, 179),np.uint8)
+magenta_max_mask = np.array((2, 71, 179),np.uint8)
 ### END OF CONSTANTS ###
 
 err = 0 #текущая накопленная ошибка
@@ -214,9 +226,7 @@ def track_robot():
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) #переводим в hsv
 
     ### DETECTING ROBOT ###
-    hsvg_min = np.array((2, 71, 179),np.uint8) #нижняя граница для красного
-    hsvg_max = np.array((19, 184, 255), np.uint8) #верхняя граница для красного
-    thresh = cv2.inRange(hsv, hsvg_min, hsvg_max) #маска красного
+    thresh = cv2.inRange(hsv, persik_min_mask, persik_max_mask) #маска красного
     moments = cv2.moments(thresh, 1) #находим центр красного
     dMo1 = moments['m01']
     dMo2 = moments['m10']
@@ -226,9 +236,7 @@ def track_robot():
     if (showMask):
         cv2.imshow('mask1', thresh)
         cv2.waitKey(1)
-    hsvg_min2 = np.array((158, 121, 83), np.uint8) #нижняя граница для мадженты
-    hsvg_max2 = np.array((172, 255, 255 ), np.uint8) #верхняя граница для мадженты
-    thresh = cv2.inRange(hsv, hsvg_min2, hsvg_max2) #маска мадженты
+    thresh = cv2.inRange(hsv, magenta_min_mask, magenta_max_mask) #маска мадженты
     moments = cv2.moments(thresh, 1) #находим центр мадженты
     dMo1 = moments['m01']
     dMo2 = moments['m10']
@@ -304,6 +312,8 @@ if (resize): #при необходимости меняем разрешени�
 height = img.shape[0]
 width = img.shape[1]
 
+setSpeed(35)
+
 while True: #показываем картинку в реальном времени для настройки камеры
     ret, img = cap.read()
     if (resize):
@@ -316,8 +326,8 @@ while True: #показываем картинку в реальном врем�
 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV) #конвертируем в hsv
 #setSpeed(30)
 ### FIND OBJECTS ###
-corner_points = find_large_clusters(hsv, np.array((0, 0, 0), np.uint8), np.array((255, 255, 26), np.uint8), cornerarea) #находим крайние маркеры и объекты
-start_objects = find_large_clusters(hsv, np.array((0, 0, 0), np.uint8), np.array((255, 255, 49), np.uint8), startarea)
+corner_points = find_large_clusters(hsv, corner_min_mask, corner_max_mask, cornerarea) #находим крайние маркеры и объекты
+start_objects = find_large_clusters(hsv, start_min_mask, start_max_mask, startarea)
 
 a = [] #массив, помечающий пиксели, принадлежащие траектории
 visited = [] #массив пометок о посещении
@@ -401,7 +411,7 @@ points.append([ystx, ysty])
 tekpoint = 0 #текущая точка
 while (tekpoint < len(points)): #если не все точки пройдены
     if (not skipPath):
-        drive_to_point(points[tekpoint][0], points[tekpoint][1], 30, 40, 0.2, False) #едем в точку
+        drive_to_point(points[tekpoint][0], points[tekpoint][1], 200, 25, 0.15, False) #едем в точку
     if (tekpoint + 12 > len(points) and tekpoint != len(points - 1)):
         tekpoint = len(points - 1)
     else:
@@ -419,8 +429,8 @@ width = img.shape[1]
 hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 res = cv2.cvtColor(hsv, cv2.COLOR_HSV2BGR)
 
-green_points = find_large_clusters(hsv, np.array((57, 167, 75), np.uint8), np.array((88, 255, 255), np.uint8), objectarea)
-yellow_points = find_large_clusters(hsv, np.array((12, 43, 163), np.uint8), np.array((29, 255, 255), np.uint8), objectarea)
+green_points = find_large_clusters(hsv, green_min_mask, green_max_mask, objectarea)
+yellow_points = find_large_clusters(hsv, yellow_min_mask, yellow_max_mask, objectarea)
 
 ### FILTER OBJECTS ###
 meancorner = 0 #старое название, это расстояние до самой дальней крайней точки
@@ -497,18 +507,23 @@ for (x, y) in green_points:
     point = (x, y) #требуемая точка
     if (point == cube):
         continue
-    drive_to_point(ctx, cty, 100, 50, 0.17) #едем в центр
+    setSpeed(35)
+    drive_to_point(ctx, cty, 100, 30, 0.17) #едем в центр
     send(5) #открываем захват
     d = dist(ctx, cty, x, y) #расстояние до точки
-    x = int(ctx + (x - ctx) * (1 + 20 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
-    y = int(cty + (y - cty) * (1 + 20 / d)) # (чтобы точно забрать цилиндр)
+    x = int(ctx + (x - ctx) * (1 + 30 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
+    y = int(cty + (y - cty) * (1 + 30 / d)) # (чтобы точно забрать цилиндр)
     drive_to_point(x, y, 100, 35, 0.17) #доехать до точки
     #dovorot(x, y) #довернуть для точного захвата
     send(255) #остановиться
     send(4) #закрыть захват
-    drive_to_point(ctx, cty, 100, 50, 0.17) #вернуться в центр
+    setSpeed(40)
+    drive_to_point(ctx, cty, 200, 30, 0.17) #вернуться в центр
 
-drive_to_point(gstx, gsty, 100, 50, 0.17) #отвезти на базу
+d = dist(ctx, cty, gstx, gsty)
+x = int(ctx + (gstx - ctx) * (1 + 30 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
+y = int(cty + (gsty - cty) * (1 + 30 / d)) # (чтобы точно забрать цилиндр)    
+drive_to_point(x, y, 200, 30, 0.17) #отвезти на базу
 send(255) #остановиться
 send(5) #открыть захват
 send(6) #отъехать назад
@@ -518,20 +533,28 @@ send(4)
 drive_to_point(gstx, gsty, 100, 50, 0.17) #отвезти куб
 
 for (x, y) in yellow_points:
-    drive_to_point(ctx, cty, 100, 50, 0.17) #едем в центр
+    setSpeed(35)
+    drive_to_point(ctx, cty, 100, 30, 0.17) #едем в центр
     point = (x, y) #требуемая точка
     send(5) #открываем захват
     d = dist(ctx, cty, x, y) #расстояние до точки
-    x = int(ctx + (x - ctx) * (1 + 20 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
-    y = int(cty + (y - cty) * (1 + 20 / d)) # (чтобы точно забрать цилиндр)
-    drive_to_point(x, y, 100, 35, 0.17) #доехать до точки
+    x = int(ctx + (x - ctx) * (1 + 30 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
+    y = int(cty + (y - cty) * (1 + 30 / d)) # (чтобы точно забрать цилиндр)
+    drive_to_point(x, y, 200, 35, 0.17) #доехать до точки
     #dovorot(x, y) #довернуть для точного захвата
     send(255) #остановиться
     send(4) #закрыть захват
-    drive_to_point(ctx, cty, 100, 50, 0.17) #вернуться в центр
+    setSpeed(40)
+    drive_to_point(ctx, cty, 200, 30, 0.17) #вернуться в центр
 
-drive_to_point(ystx, ysty, 100, 50, 0.17) #отвезти на базу
+d = dist(ctx, cty, ystx, ysty)
+x = int(ctx + (ystx - ctx) * (1 + 30 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
+y = int(cty + (ysty - cty) * (1 + 30 / d)) # (чтобы точно забрать цилиндр)
+drive_to_point(x, y, 200, 30, 0.17) #отвезти на базу
 send(255) #остановиться
+send(6)
+setSpeed(35)
+drive_to_point(yellow_points[0][0], yellow_points[0][1], 100, 35, 0.17)
 
 # ret_point = get_returning_path(max_point[0], max_point[1]) #получить координаты точки для объезда
 # drive_to_point(ret_point[1], ret_point[0]) #ехать туда
