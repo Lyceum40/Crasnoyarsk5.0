@@ -431,10 +431,12 @@ for i in range(len(corner_points) - 1): #сортировка крайних т�
 meancorner = dist(ctx, cty, corner_points[len(corner_points) - 1][0], corner_points[len(corner_points)  - 1][1]) #расстояние до самой дальней точки
 print(meancorner)
 
+cube = (0, 0)
 maxgreen = 0 #расстояние до самого далёкого зелёного объекта
 max_green_point = (0, 0) #координаты самого далёкого зелёного объекта
 maxyellow = 0 #аналогично, только для жёлтых объектов
 max_yellow_point = (0, 0)
+minsummdist = 1e9
 er_list = [] #список на удлаение (объекты за полем)
 for i in range(len(green_points)): # проходим по зелёным точкам
     dpoint = dist(ctx, cty, green_points[i][0], green_points[i][1]) #считаем расстояние от центра
@@ -444,6 +446,10 @@ for i in range(len(green_points)): # проходим по зелёным точ
     elif (dpoint > maxgreen): #обновляем самый далёкий объект
         maxgreen = dpoint
         max_green_point = green_points[i]
+    dsumm = dist(gstx, gsty, green_points[i][0], green_points[i][1]) + dist(ystx, ysty, green_points[i][0], green_points[i][1])
+    if (dsumm < minsummdist):
+        minsummdist = dsumm
+        cube = green_points[i]
 
 plus = 0 #сдвиг индексов из-за удаления
 for i in er_list: #удаляем объекты из списка на удаление
@@ -488,8 +494,10 @@ send(255) #остановка робота
 # green_points = sort_points_by_angle(green_points) #сортируем точки
 
 for (x, y) in green_points:
-    drive_to_point(ctx, cty, 100, 50, 0.17) #едем в центр
     point = (x, y) #требуемая точка
+    if (point == cube):
+        continue
+    drive_to_point(ctx, cty, 100, 50, 0.17) #едем в центр
     send(5) #открываем захват
     d = dist(ctx, cty, x, y) #расстояние до точки
     x = int(ctx + (x - ctx) * (1 + 20 / d)) #вычисляем координаты точки на 20 пикселей дальше от центра
@@ -504,6 +512,10 @@ drive_to_point(gstx, gsty, 100, 50, 0.17) #отвезти на базу
 send(255) #остановиться
 send(5) #открыть захват
 send(6) #отъехать назад
+
+drive_to_point(ystx, ysty, 100, 50, 0.17)
+send(4)
+drive_to_point(gstx, gsty, 100, 50, 0.17) #отвезти куб
 
 for (x, y) in yellow_points:
     drive_to_point(ctx, cty, 100, 50, 0.17) #едем в центр
